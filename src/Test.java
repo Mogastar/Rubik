@@ -7,22 +7,94 @@ import Chemin.*;
 public class Test {
 	
 	public static void main(String[] args){
-		init();
-		//testFindSimple(8);
+		
+		//================== Préparation ===================//
+		
+		//preparation();  //Generer Pattern Database si vous n'en avez pas
+		
+		//================== Configuration ===================//
+		
+		//boolean manuel = false;  //Mettez-le en false si vous ne voulez pas entrer les couleurs à la main
+		//int complexite = 9;  //Choisir le nombre d'étapes de mélange
+		//int niveauRecherche = 100000;  //Limiter le nombre de noeuds parcourus
+		
+		//================== Recherche de la solution ===================//
+		
+		//TestGeneral(manuel, complexite, niveauRecherche);
+		
+		//================== Autre tests ===================//
+		
+		//init();
+		//testAffichage(8);
+		//testFindDFS(8);
 		//debugDistanceCoinEdge(20);
-		//testAStar(10, 't');
+		//testFindPQ(10, 't');
 		//testInitDistance();
 		//testInitPattern();
+		//testLimite(6);
+		//testSQL(12);
 		//testDistance();
 		//debugCoinEdge();
 		//debugCoins(30);
 		//Pattern.print();
-		testFindDFS(20, 'p');
+		//testFindIDA(20, 'p');
 		//testHash();
 		//testPattern(5);
-		//testCompare(20);
+		//testCompareFind(20, 'p');
+		//statCompareFind(20,20);
+		//statCompareDistance(20,15);
 	}
 	
+	/*
+	 * Généner Pattern Database à un niveau de 6, cela va prendre quelque minutes
+	 */
+	
+	static void preparation() {
+		testInitPattern((byte)6);
+	}
+	
+	/*
+	 * Lancer une recherche avec IDA*
+	 */
+
+	static void TestGeneral(boolean manuel, int complexite,	int niveauRecherche) {
+		PatternArray.readBinaryPattern();
+		
+		System.out.print("\n//======== Test =======\n");
+		
+		Cube test;
+		if (manuel)
+		{
+			test = new Cube();  //Entrer les couleurs manuellement comme décrit dans l'annexe du rapport
+		}
+		else
+		{
+			test = new Cube(Cube.src);
+			melanger(test, complexite, true);  //Mélanger aléatoirement le cube
+		}
+		Cube backUp = new Cube(test);
+		backUp.show2D();  //Afficher le cube mélanger
+	
+		System.out.format("\nDistance minimale : %d\n",test.distance('p'));
+		
+		long startTime = System.currentTimeMillis();
+		Chemin ans = new Chemin(test, Cube.src);
+		ans.Time = niveauRecherche;
+		
+		try{
+			ans.runFindIDA('p', true);  //Trouver la solution
+			ans.print();
+		}
+		catch (TimeoutException e)  //Limiter la recherche
+		{
+			System.out.println(e.getMessage());
+		}
+		
+		long endTime = System.currentTimeMillis();
+		long duration = endTime - startTime;
+		System.out.printf("\nElapsed time: %d milliseconds\n", duration);
+	}
+
 	/*
 	 * Utiliser les valeurs aléatoires pour mélanger le cube, le nombre d'action est fixé pour le test
 	 */
@@ -37,16 +109,29 @@ public class Test {
 	}
 	
 	/*
-	 * Initialisation du programme
+	 * Tester si la rotation et l'affichage du cube fonctionne
+	 */
+	
+	public static void testAffichage(int etape)
+	{
+		System.out.println("\n=========== Test d'affichage ===========\n");
+		Cube test = new Cube(Cube.src);
+		melanger(test, etape, true);
+		test.show2D();
+	}
+	
+	/*
+	 * Initialisation du programme lors du développement
 	 */
 	
 	static void init(){
 		System.out.println("\n=========== Début d'initialisation ===========\n");
 		Cube.setWidth(40);
 		//Pattern.readPattern("Coin.txt", "EdgeOne.txt", "EdgeTwo.txt");  //lire les fichiers
-		Pattern.readBinaryPattern("Coin.dat", "EdgeOne.dat", "EdgeTwo.dat");
+		//Pattern.readBinaryPattern("Coin.dat", "EdgeOne.dat", "EdgeTwo.dat");
 		//Pattern.printResume();
-		Distance.readDistance("DistanceManhattan.txt");
+		Distance.readDistance("DistanceSimple.txt","DistanceManhattan.txt");
+		PatternArray.readBinaryPattern();
 		System.out.println("\n=========== Fin d'initialisation ===========\n");
 	}
 	
@@ -60,15 +145,20 @@ public class Test {
 			System.out.format("\n//======== Test %d =======\n", i + 1);
 			Cube test = new Cube(Cube.src);
 			melanger(test, i, true);
-			System.out.format("\nDistance minimale : %d\n",test.distance('s'));
-			Cube dest = new Cube(test);  //Sauvegarder la disposition pour l'affichage
-			dest.show2D();
+			//Cube dest = new Cube(test);  //Sauvegarder la disposition pour l'affichage
+			//dest.show2D();
 			long startTime = System.currentTimeMillis();
 			Chemin ans = new Chemin(test, Cube.src);
-			ans.runFindSimple(i);  //Trouver le chemin
+			try{
+				ans.runFindDFS(i, true);  //Trouver le chemin
+				ans.print();
+			}
+			catch (TimeoutException e)
+			{
+				System.err.println(e.getMessage());
+			}
 			long endTime = System.currentTimeMillis();
 			long duration = endTime - startTime;
-			ans.print();
 			System.out.printf("\nElapsed time: %d milliseconds\n", duration);
 		}	
 	}
@@ -113,24 +203,30 @@ public class Test {
 	}
 	
 	/*
-	 * La recherche A*
+	 * La recherche avec la queue de priorité
 	 */
 	
-	static void testAStar(int etape, char mode){
+	static void testFindPQ(int etape, char mode){
 		for (int i = 0 ; i <= etape ; i++)
 		{
 			System.out.format("\n//======== Test %d =======\n", i + 1);
 			Cube test = new Cube(Cube.src);
 			melanger(test, i, true);
 			System.out.format("\nDistance minimale : %d\n",test.distance(mode));
-			Cube dest = new Cube(test);  //Sauvegarder la disposition pour l'affichage
-			dest.show2D();
+			//Cube dest = new Cube(test);  //Sauvegarder la disposition pour l'affichage
+			//dest.show2D();
 			long startTime = System.currentTimeMillis();
 			Chemin ans = new Chemin(test, Cube.src);
-			ans.runFindAStar(mode);  //Trouver le chemin
+			try{
+				ans.runFindPQ(mode);  //Trouver le chemin
+				ans.print();
+			}
+			catch (TimeoutException e)
+			{
+				System.err.println(e.getMessage());
+			}
 			long endTime = System.currentTimeMillis();
 			long duration = endTime - startTime;
-			ans.print();
 			System.out.printf("\nElapsed time: %d milliseconds\n", duration);
 		}	
 	}
@@ -149,10 +245,42 @@ public class Test {
 	 * Tester la classe Pattern
 	 */
 	
-	static void testInitPattern()
+	static void testInitPattern(byte limite)
 	{
-		Pattern.calculatePattern();
-		Pattern.printResume();
+		long startTime = System.currentTimeMillis();
+		//Pattern.calculatePattern();
+		//Pattern.printResume();
+		PatternArray.calculatePattern(limite);
+		long endTime = System.currentTimeMillis();
+		long duration = endTime - startTime;
+		System.out.printf("\nElapsed time: %d milliseconds\n", duration);
+		
+	}
+	
+	/*
+	 * Tester la vitesse d'exécution de l'ordinateur, une limite de 8 peut prendre 1 heure
+	 */
+	
+	static void testLimite(int limite)
+	{
+		long startTime = System.currentTimeMillis();
+		Pattern.patternLimite(new Cube(Cube.src), (byte)1, limite, -1);
+		long endTime = System.currentTimeMillis();
+		long duration = endTime - startTime;
+		System.out.printf("\nElapsed time: %d milliseconds\n", duration);
+	}
+	
+	/*
+	 * Un essai avec MySQL, inutile
+	 */
+	
+	static void testSQL(int limite)
+	{
+		long startTime = System.currentTimeMillis();
+		Pattern.calculatePatternSQL(limite);
+		long endTime = System.currentTimeMillis();
+		long duration = endTime - startTime;
+		System.out.printf("\nElapsed time: %d milliseconds\n", duration);
 	}
 	
 	/*
@@ -197,7 +325,7 @@ public class Test {
 	 * Test principal qu'on utilise pour résoudre le cube
 	 */
 	
-	static void testFindDFS(int etape, char mode){
+	static void testFindIDA(int etape, char mode){
 		for (int i = 0 ; i <= etape ; i++)
 		{
 			System.out.format("\n//======== Test %d =======\n", i + 1);
@@ -207,12 +335,12 @@ public class Test {
 			long startTime = System.currentTimeMillis();
 			Chemin ans = new Chemin(test, Cube.src);
 			try{
-				ans.runDFS(mode);  //Trouver le chemin
+				ans.runFindIDA(mode, true);  //Trouver le chemin
 				ans.print();
 			}
 			catch (TimeoutException e)
 			{
-				System.err.println(e.getMessage());
+				System.out.println(e.getMessage());
 			}	
 			long endTime = System.currentTimeMillis();
 			long duration = endTime - startTime;
@@ -224,9 +352,9 @@ public class Test {
 	 * Tester la fonction de hachage
 	 */
 	
-	static void testHash(){
+	static void testHash(int i){
 		Cube test = new Cube(Cube.src);
-		melanger(test, 1, true);
+		melanger(test, i, true);
 		test.show2D();
 		System.out.println(test.hashCoin());
 		System.out.println(test.hashEdgeOne());
@@ -241,8 +369,9 @@ public class Test {
 	static void testPattern(int steps){
 		long startTime = System.currentTimeMillis();
 		//Pattern.readPattern("Coin.txt", "EdgeOne.txt", "EdgeTwo.txt");
-		Pattern.readBinaryPattern("Coin.dat", "EdgeOne.dat", "EdgeTwo.dat");
-		Pattern.printResume();
+		//Pattern.readBinaryPattern("Coin.dat", "EdgeOne.dat", "EdgeTwo.dat");
+		//Pattern.printResume();
+		PatternArray.readBinaryPattern();
 		int i = 0;
 		while(i<20)
 		{
@@ -265,8 +394,9 @@ public class Test {
 	 * Comparer la méthode Pattern et la méthode avec une distance simple, très grande différence
 	 */
 	
-	static void testCompare(int etape)
+	static void testCompareFind(int etape, char mode)
 	{
+		System.out.format("Mode %c\n", mode);
 		for (int i = 0 ; i <= etape ; i++)
 		{
 			System.out.format("\n//======== Test %d =======\n", i + 1);
@@ -275,32 +405,249 @@ public class Test {
 			Cube compare = new Cube(test);
 			System.out.format("\nDistance minimale : %d\n",test.distance('p'));
 			long startTime = System.currentTimeMillis();
-			Chemin ans = new Chemin(test, Cube.src);
+			Chemin ans = new Chemin(compare, Cube.src);
 			try{
-				ans.runDFS('p');  //Trouver le chemin
+				ans.runFindIDA(mode, true);  //Trouver le chemin
 				ans.print();
 			}
 			catch (TimeoutException e)
 			{
-				System.err.println(e.getMessage());
+				System.out.println(e.getMessage());
 			}	
 			long endTime = System.currentTimeMillis();
 			long duration = endTime - startTime;
-			System.out.printf("\nElapsed time: %d milliseconds pour Pattern\n\n", duration);
-			System.out.format("\nDistance minimale : %d\n",test.distance('i'));
+			System.out.printf("\nElapsed time: %d milliseconds pour IDA*\n\n", duration);
+			
+			System.out.println("-----------");
+			compare = new Cube(test);
+			System.out.format("\nDistance minimale : %d\n",compare.distance('i'));
 			startTime = System.currentTimeMillis();
 			ans = new Chemin(compare, Cube.src);
 			try{
-				ans.runDFS('i');  //Trouver le chemin
+				ans.runFindPQ(mode);  //Trouver le chemin
 				ans.print();
 			}
 			catch (TimeoutException e)
 			{
-				System.err.println(e.getMessage());
+				System.out.println(e.getMessage());
 			}	
 			endTime = System.currentTimeMillis();
 			duration = endTime - startTime;
-			System.out.printf("\nElapsed time: %d milliseconds pour Manhattan\n", duration);
+			System.out.printf("\nElapsed time: %d milliseconds pour BFS avec la queue de priorité\n", duration);
+			
+			System.out.println("-----------");
+			compare = new Cube(test);
+			System.out.format("\nDistance minimale : %d\n",compare.distance('i'));
+			startTime = System.currentTimeMillis();
+			ans = new Chemin(compare, Cube.src);
+			try{
+				ans.runFindDFS(10, true);  //Trouver le chemin
+				ans.print();
+			}
+			catch (TimeoutException e)
+			{
+				System.out.println(e.getMessage());
+			}	
+			endTime = System.currentTimeMillis();
+			duration = endTime - startTime;
+			System.out.printf("\nElapsed time: %d milliseconds pour BFS\n", duration);
 		}	
 	}
+	
+	/*
+	 * Comparer la performance des différents algorithmes en faisant des statistiques
+	 * seed contrôle la taille de l'échantillon
+	 */
+	
+	static void statCompareFind(int step, int seed)
+	{
+		int n = 5;
+		long time[][] = new long[n][step];
+		int count[][] = new int[n][step];
+		int stat[][] = new int[n][step];
+		for (int i = 0 ; i < n ; i++)
+		{
+			for (int j = 0 ; j < step ; j++)
+			{
+				stat[i][j] = 0;
+				count[i][j] = 0;
+				time[i][j] = 0;
+			}
+		}
+		for (int i = 10 ; i < step ; i++)
+		{
+			for (int j = 0 ; j <= seed ; j++)
+			{
+				Cube test = new Cube(Cube.src);
+				melanger(test, i, false);
+				
+				Cube compare = new Cube(test);
+				long startTime = System.currentTimeMillis();
+				Chemin ans = new Chemin(compare, Cube.src);
+				try{
+					ans.runFindIDA('p', false);  //Trouver le chemin
+					long endTime = System.currentTimeMillis();
+					time[4][ans.size()] += endTime - startTime;
+					count[4][ans.size()]++;
+				}
+				catch (TimeoutException e)
+				{
+					//System.out.println(e.getMessage());
+				}	
+				
+				compare = new Cube(test);
+				startTime = System.currentTimeMillis();
+				ans = new Chemin(compare, Cube.src);
+				try{
+					ans.runFindIDAPQ('p', false);  //Trouver le chemin
+					long endTime = System.currentTimeMillis();
+					time[3][ans.size()] += endTime - startTime;
+					count[3][ans.size()]++;
+				}
+				catch (TimeoutException e)
+				{
+					//System.out.println(e.getMessage());
+				}
+				
+				if (i > 7) continue;
+				
+				compare = new Cube(test);
+				startTime = System.currentTimeMillis();
+				ans = new Chemin(compare, Cube.src);
+				try{
+					ans.runFindDFS(i, false); //Trouver le chemin
+					long endTime = System.currentTimeMillis();
+					time[2][ans.size()] = endTime - startTime;
+					count[2][ans.size()]++;
+				}
+				catch (TimeoutException e)
+				{
+					//System.out.println(e.getMessage());
+				}
+				
+				if (i > 6) continue;
+				
+				compare = new Cube(test);
+				startTime = System.currentTimeMillis();
+				ans = new Chemin(compare, Cube.src);
+				try{
+					ans.runFindBFS(i);  //Trouver le chemin
+					long endTime = System.currentTimeMillis();
+					time[1][ans.size()] = endTime - startTime;
+					count[1][ans.size()]++;
+				}
+				catch (TimeoutException e)
+				{
+					//System.out.println(e.getMessage());
+				}	
+				
+				if (i > 5) continue;
+				
+				compare = new Cube(test);
+				startTime = System.currentTimeMillis();
+				ans = new Chemin(compare, Cube.src);
+				try{
+					ans.runFindPQ('p');  //Trouver le chemin
+					long endTime = System.currentTimeMillis();
+					time[0][ans.size()] = endTime - startTime;
+					count[0][ans.size()]++;
+				}
+				catch (TimeoutException e)
+				{
+					//System.out.println(e.getMessage());
+				}
+				
+			}
+		}
+		for (int i = 0 ; i < n ; i++)
+		{
+			for (int j = 0 ; j < step ; j++)
+			{
+				if (count[i][j] >= 1)
+					stat[i][j] = (int)time[i][j] / count[i][j];
+			}
+		}
+		for (int i = 0 ; i < n ; i++)
+		{
+			System.out.printf("Méthode #%d :\t", i + 1);
+			for (int j = 0 ; j < step ; j++)
+			{
+				if (count[i][j] >= 1)
+					System.out.printf("%d(%d)\t", stat[i][j], j);
+				else
+					System.out.printf("NA\t", stat[i][j]);
+			}
+			System.out.println();
+		}
+	}
+	
+	/*
+	 * Comparer les fonctions heuristiques
+	 */
+	
+	static void statCompareDistance(int step, int seed)
+	{
+		int n = 4;
+		long time[][] = new long[n][step];
+		int count[][] = new int[n][step];
+		int stat[][] = new int[n][step];
+		for (int i = 0 ; i < n ; i++)
+		{
+			for (int j = 0 ; j < step ; j++)
+			{
+				stat[i][j] = 0;
+				count[i][j] = 0;
+				time[i][j] = 0;
+			}
+		}
+		char mode[] = {'c', 'o', 'e', 'p'};  //on pourra ajouter d'autres fonctions heuristiques
+		int limit[] = {11, 14, 14, 20};  //éviter d'aller trop loin pour certaine fonction heuristique
+		for (int i = 0 ; i < step ; i++)
+		{
+			for (int j = 0 ; j <= seed ; j++)
+			{
+				Cube test = new Cube(Cube.src);
+				melanger(test, i, false);
+				for (int k = 0 ; k < n ; k++)
+				{
+					if (i > limit[k]) continue;
+					
+					Cube compare = new Cube(test);
+					long startTime = System.currentTimeMillis();
+					Chemin ans = new Chemin(compare, Cube.src);
+					try{
+						ans.runFindIDA(mode[k], false);  //Trouver le chemin
+						long endTime = System.currentTimeMillis();
+						time[k][ans.size()] += endTime - startTime;
+						count[k][ans.size()]++;
+					}
+					catch (TimeoutException e)
+					{
+						//System.out.println(e.getMessage());
+					}	
+				}
+			}
+		}
+		for (int i = 0 ; i < n ; i++)
+		{
+			for (int j = 0 ; j < step ; j++)
+			{
+				if (count[i][j] >= 1)
+					stat[i][j] = (int)time[i][j] / count[i][j];
+			}
+		}
+		for (int i = 0 ; i < n ; i++)
+		{
+			System.out.printf("Distance #%c :\t", mode[i]);
+			for (int j = 0 ; j < step ; j++)
+			{
+				if (count[i][j] >= 1)
+					System.out.printf("%d(%d)\t", stat[i][j], j);
+				else
+					System.out.printf("NA\t", stat[i][j]);
+			}
+			System.out.println();
+		}
+	}
+	
 }

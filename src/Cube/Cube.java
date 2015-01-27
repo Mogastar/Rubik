@@ -26,7 +26,7 @@ public class Cube {
 	 */
 
 	int[][][] color = new int[6][3][3];
-	static int width = 60;  //Modifier la taille une fois pour toute en utilisant une variable statique
+	static int width = 40;  //Modifier la taille une fois pour toute en utilisant une variable statique
 	
 	public static Cube src = new Cube("Source.txt");  //Ce cube est l'état final
 	public static Cube black = new Cube("Black.txt");  //Ce cube est tout noir pour le test
@@ -57,12 +57,13 @@ public class Cube {
 	 */
 
 	public Cube(){
+		char[] f = {'U', 'L', 'F', 'R', 'B', 'D'};
 		Scanner read = new Scanner(System.in);
 		this.color = new int[6][3][3];
 		int tmp = 0;
 		for (int face = 0 ; face < 6 ; face++)
 		{
-			System.out.format("Face %d : ", face);
+			System.out.format("Face %c : \n", f[face]);
 			for (int rang = 0 ; rang < 3 ; rang++)
 			{
 				for (int colonne = 0 ; colonne < 3 ; colonne++)
@@ -451,7 +452,7 @@ public class Cube {
 			int f = color[eCoord[0][0]][eCoord[0][1]][eCoord[0][2]];
 			int s = color[eCoord[1][0]][eCoord[1][1]][eCoord[1][2]];
 			if (f == 6 || s == 6) continue;
-			tmp = Distance.distEdge[edge][f][s];  //utiliser la bonne distance dans ce cas-là
+			tmp = Distance.distEdgeManhattan[edge][f][s];  //utiliser la bonne distance dans ce cas-là
 			somme += tmp;
 		}
 		
@@ -462,7 +463,7 @@ public class Cube {
 			int s = color[cCoord[1][0]][cCoord[1][1]][cCoord[1][2]];
 			int t = color[cCoord[2][0]][cCoord[2][1]][cCoord[2][2]];
 			if (f == 6 || s == 6 || t == 6) continue;
-			tmp = Distance.distCoin[coin][f][s][t];
+			tmp = Distance.distCoinManhattan[coin][f][s][t];
 			somme += tmp;
 		}
 		return (somme + 7) / 8;
@@ -479,7 +480,7 @@ public class Cube {
 			int f = color[eCoord[0][0]][eCoord[0][1]][eCoord[0][2]];
 			int s = color[eCoord[1][0]][eCoord[1][1]][eCoord[1][2]];
 			if (f == 6 || s == 6) continue;
-			tmp = Distance.distEdge[edge][f][s];
+			tmp = Distance.distEdgeManhattan[edge][f][s];
 			sommeEdge += tmp;
 		}
 		int sommeCoin = 0;
@@ -490,7 +491,7 @@ public class Cube {
 			int s = color[cCoord[1][0]][cCoord[1][1]][cCoord[1][2]];
 			int t = color[cCoord[2][0]][cCoord[2][1]][cCoord[2][2]];
 			if (f == 6 || s == 6 || t == 6) continue;
-			tmp = Distance.distCoin[coin][f][s][t];
+			tmp = Distance.distCoinManhattan[coin][f][s][t];
 			sommeCoin += tmp;
 		}
 		return Math.max((sommeCoin + 3) / 4, (sommeEdge + 3) / 4);  //une formule trouvée sur Internet
@@ -505,6 +506,7 @@ public class Cube {
 	
 	public int distancePatternCoin()
 	{
+		/*
 		long key = this.hashCoin();
 		if (Pattern.coin.containsKey(key))
 		{
@@ -514,10 +516,14 @@ public class Cube {
 		{
 			return 7;  //la valeur dépend du niveau de pattern qui est 6 actuellement
 		}
+		*/
+		int key = this.hashC();
+		return PatternArray.coin[key];
 	}
 	
 	public int distancePatternEdgeOne()
 	{
+		/*
 		long key = this.hashEdgeOne();
 		if (Pattern.edgeOne.containsKey(key))
 		{
@@ -527,10 +533,14 @@ public class Cube {
 		{
 			return 7;
 		}
+		*/
+		int key = this.hashO();
+		return PatternArray.edgeOne[key];
 	}
 	
 	public int distancePatternEdgeTwo()
 	{
+		/*
 		long key = this.hashEdgeTwo();
 		if (Pattern.edgeTwo.containsKey(key))
 		{
@@ -540,6 +550,9 @@ public class Cube {
 		{
 			return 7;
 		}
+		*/
+		int key = this.hashT();
+		return PatternArray.edgeTwo[key];
 	}
 	
 	public void printDistance()
@@ -617,5 +630,94 @@ public class Cube {
 		}
 		return hash;
 	}
+	
+	public int hashC()
+	{
+		int pw = 1;
+		int fact = 8 * 7 * 6 * 5 * 4 * 3 * 2;
+		int per = 0;
+		int ori = 0;
+		int[] pos = {0, 0, 0, 0, 0, 0, 0, 0};
+		for (int i = 0 ; i < 8 ; i++)
+		{
+			Coin c = new Coin(i, this);
+			int index = c.index;
+			int max = 0;
+			int compare = -1;
+			for (int j = 0 ; j < 3 ; j++)
+			{
+				if (compare < color[Coin.realPosition[index][j][0]][Coin.realPosition[index][j][1]][Coin.realPosition[index][j][2]])
+				{
+					compare = color[Coin.realPosition[index][j][0]][Coin.realPosition[index][j][1]][Coin.realPosition[index][j][2]];
+					max = j;
+				}
+			}
+			for (int j = index + 1 ; j < 8 ; j++)
+				pos[j]++;
+			index -= pos[index];
+			fact /= 8 - i;
+			per += fact * index;
+			//fact /= 7 - i;
+			if (i < 7) 
+			{
+				ori += pw * max;
+				pw *= 3;
+			}
+		}
+		return per * pw + ori;
+	}
+	
+	public int hashO()
+	{
+		int pw = 1;
+		int fact = 11 * 10 * 9 * 8 * 7;
+		int per = 0;
+		int ori = 0;
+		int[] pos = new int[12];
+		for (int i = 0 ; i < 12 ; i++)
+		{
+			pos[i] = 0;
+		}
+		for (int i = 0 ; i < 6 ; i++)
+		{
+			Edge e = new Edge(i, this);
+			int index = e.index;
+			for (int j = index + 1; j < 12 ; j++)
+				pos[j]++;
+			index -= pos[index];
+			per += fact * index;
+			fact /= 11 - i;
+			ori += pw * ((e.First > e.Second) ? 1 : 0);
+			pw *= 2;
+		}
+		return per * pw + ori;
+	}
+	
+	public int hashT()
+	{
+		int pw = 1;
+		int fact = 11 * 10 * 9 * 8 * 7;
+		int per = 0;
+		int ori = 0;
+		int[] pos = new int[12];
+		for (int i = 0 ; i < 12 ; i++)
+		{
+			pos[i] = 0;
+		}
+		for (int i = 6 ; i < 12 ; i++)
+		{
+			Edge e = new Edge(i, this);
+			int index = e.index;
+			for (int j = index + 1; j < 12 ; j++)
+				pos[j]++;
+			index -= pos[index];
+			per += fact * index;
+			fact /= 17 - i;
+			ori += pw * ((e.First > e.Second) ? 1 : 0);
+			pw *= 2;
+		}
+		return per * pw + ori;
+	}
+	
 }
 

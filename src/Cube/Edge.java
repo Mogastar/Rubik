@@ -20,6 +20,7 @@ public class Edge {
 	 *  2 3
 	 *  2 5
 	 *  3 4
+	 *  3 5
 	 *  4 5
 	 */
 	
@@ -165,7 +166,14 @@ public class Edge {
 		makeTest(test);
 		makeBlack(black);
 		Chemin ans = new Chemin(test, black);
-		int r = ans.runFindSimple(4);
+		int r = 9;
+		try{
+			r = ans.runFindDFS(4, false);
+		}
+		catch (Exception e)
+		{
+			System.err.println(e.getMessage());
+		}
 		return r;
 	}
 	

@@ -149,7 +149,13 @@ public class Coin {
 		makeTest(test);
 		makeBlack(black);
 		Chemin ans = new Chemin(test, black);
-		ans.runFindAStar('t');
+		try{
+			ans.runFindDFS(20, false);
+		}
+		catch (Exception e)
+		{
+			System.err.println(e.getMessage());
+		}
 		for (Action a : ans.chemin())
 		{
 			a.Run(t);
@@ -165,7 +171,14 @@ public class Coin {
 		makeTest(test);
 		makeBlack(black);
 		Chemin ans = new Chemin(test, black);
-		int r = ans.runFindSimple(3);
+		int r = 9;
+		try{
+			r = ans.runFindDFS(3, false);
+		}
+		catch (Exception e)
+		{
+			System.err.println(e.getMessage());
+		}
 		//int r = ans.runDFS('c');  //pas beaucoup d'amélioration
 		return r;
 	}
@@ -196,7 +209,7 @@ public class Coin {
 		}
 		Chemin ans = new Chemin(test, black);
 		try{
-			ans.runDFS('m');  
+			ans.runFindIDA('m', false);  
 		}
 		catch (TimeoutException e)
 		{

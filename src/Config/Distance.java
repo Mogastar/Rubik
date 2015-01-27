@@ -16,6 +16,8 @@ public class Distance {
 	
 	public static int[][][][] distCoin;
 	public static int[][][] distEdge;
+	public static int[][][][] distCoinManhattan;
+	public static int[][][] distEdgeManhattan;
 	
 	public static void calculateDistance()
 	{
@@ -52,8 +54,8 @@ public class Distance {
 	
 	public static void calculateDistanceManhattan()
 	{
-		distCoin = new int[8][6][6][6];
-		distEdge = new int[12][6][6];
+		distCoinManhattan = new int[8][6][6][6];
+		distEdgeManhattan = new int[12][6][6];
 		for (int i = 0 ; i < 8 ; i++)
 		{
 			for (int j = 0 ; j < 6 ; j++)
@@ -64,7 +66,7 @@ public class Distance {
 					{
 						Coin c = new Coin(i, j, k, l);
 						int steps = c.manhattanDistance();
-						distCoin[i][j][k][l] = (steps >= 0) ? steps : 9;
+						distCoinManhattan[i][j][k][l] = (steps >= 0) ? steps : 9;
 					}
 				}
 			}
@@ -77,13 +79,13 @@ public class Distance {
 				{
 					Edge e = new Edge(i, j, k);
 					int steps = e.ManhattanDistance();
-					distEdge[i][j][k] = (steps >= 0) ? steps : 9;
+					distEdgeManhattan[i][j][k] = (steps >= 0) ? steps : 9;
 				}
 			}
 		}
 	}
 	
-	public static void readDistance(String path)
+	public static void readDistance(String path, String pathManhattan)
 	{
 		try{
 			FileReader file = new FileReader(path);
@@ -134,6 +136,55 @@ public class Distance {
 		{
 			System.out.println(e.getMessage());
 		}
+		try{
+			FileReader fileManhattan = new FileReader(pathManhattan);
+			BufferedReader readManhattan = new BufferedReader(fileManhattan);
+			try
+			{
+				distCoinManhattan = new int[8][6][6][6];
+				distEdgeManhattan = new int[12][6][6];
+				while (readManhattan.ready()) 
+				{
+					for (int i = 0 ; i < 8 ; i++)
+					{
+						for (int j = 0 ; j < 6 ; j++)
+						{
+							for (int k = 0 ; k < 6 ; k++)
+							{
+								String line = readManhattan.readLine();
+								String[] col = line.split(" ");
+								for (int l = 0 ; l < 6 ; l++)
+								{
+									distCoinManhattan[i][j][k][l] = Integer.parseInt(col[l]);
+								}
+							}
+						}
+					}
+					for (int i = 0 ; i < 12 ; i++)
+					{
+						for (int j = 0 ; j < 6 ; j++)
+						{
+							String line = readManhattan.readLine();
+							String[] col = line.split(" ");
+							for (int k = 0 ; k < 6 ; k++)
+							{
+								distEdgeManhattan[i][j][k] = Integer.parseInt(col[k]);
+							}
+						}
+					}
+					
+				}
+			}
+			catch (Exception e)
+			{
+				System.out.println(e.getMessage());
+			}
+			readManhattan.close();
+		}
+		catch (Exception e)
+		{
+			System.out.println(e.getMessage());
+		}
 	}
 	
 	public static void print()
@@ -147,6 +198,7 @@ public class Distance {
 					for (int l = 0 ; l < 6 ; l++)
 					{
 						System.out.print(distCoin[i][j][k][l]);
+						//System.out.print(distCoinManhattan[i][j][k][l]);
 						System.out.print(' ');
 					}
 					System.out.println();
@@ -163,6 +215,7 @@ public class Distance {
 				for (int k = 0 ; k < 6 ; k++)
 				{
 					System.out.print(distEdge[i][j][k]);
+					//System.out.print(distEdgeManhattan[i][j][k]);
 					System.out.print(' ');
 				}
 				System.out.println();

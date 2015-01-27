@@ -5,6 +5,11 @@ import Cube.*;
 
 import java.io.*;
 import java.util.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class Pattern {
 	
@@ -45,6 +50,162 @@ public class Pattern {
 			e.printStackTrace();
 		}
 		*/
+	}
+
+	public static void initPatternSQL(){
+		Connection connect = null;
+		PreparedStatement preparedStatement = null;
+		try {
+			// this will load the MySQL driver, each DB has its own driver
+			Class.forName("com.mysql.jdbc.Driver");
+			// setup the connection with the DB.
+			connect = DriverManager.getConnection("jdbc:mysql://localhost/rubik?user=lyx&password=******");
+
+			preparedStatement = connect.prepareStatement("insert into rubik.coin values (default, ?, ?)");
+			preparedStatement.setLong(1, Cube.src.hashCoin());
+			preparedStatement.setByte(2, (byte)0);
+			preparedStatement.executeUpdate();
+
+			preparedStatement = connect.prepareStatement("insert into rubik.areteune values (default, ?, ?)");
+			preparedStatement.setLong(1, Cube.src.hashEdgeOne());
+			preparedStatement.setByte(2, (byte)0);
+			preparedStatement.executeUpdate();
+
+			preparedStatement = connect.prepareStatement("insert into rubik.aretedeux values (default, ?, ?)");
+			preparedStatement.setLong(1, Cube.src.hashEdgeTwo());
+			preparedStatement.setByte(2, (byte)0);
+			preparedStatement.executeUpdate();
+
+		} catch (Exception e) {
+			System.out.println(e);
+		} finally {
+			try {
+				connect.close();
+			}
+			catch (Exception e) {
+				System.out.println(e);
+			}
+		}
+	}
+	
+	public static void calculatePatternSQL(int limite)
+	{
+		Connection connect = null;
+		try {
+			Class.forName("com.mysql.jdbc.Driver");
+			connect = DriverManager.getConnection("jdbc:mysql://localhost/rubik?user=lyx&password=******");
+			patternSQL(new Cube(Cube.src), (byte) 1, limite, -1, connect);
+		} catch (Exception e) {
+			System.out.println(e);
+		}
+		try {
+			connect.close();
+		}
+		catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+
+	}
+
+	static void patternSQL(Cube c, byte level, int limite, int lastFace, Connection connect) throws SQLException
+	{
+		PreparedStatement preparedStatement = null;
+		ResultSet resultSet = null;
+		for (int face = 0 ; face < 6 ; face++)
+		{
+			if (lastFace == face) continue;  //toujours réduire 18 en 15
+			for (int tour = 0 ; tour < 3 ; tour++)
+			{
+				Action a = new Action(face, tour);
+				a.Run(c);
+				{
+					long key = c.hashCoin();
+					preparedStatement = connect.prepareStatement("select id, dist from rubik.coin where hash = ? limit 1; ");
+					preparedStatement.setLong(1, key);
+					resultSet = preparedStatement.executeQuery();
+					if (resultSet.next())
+					{
+						int id = resultSet.getInt(1);
+						byte dist = resultSet.getByte(2);
+						preparedStatement.close();
+						if (dist > level)
+						{
+							preparedStatement = connect.prepareStatement("update rubik.coin set dist = ? where id = ?");
+							preparedStatement.setByte(1, level);
+							preparedStatement.setInt(2, id);
+							preparedStatement.executeUpdate();
+						}
+					}
+					else
+					{
+						preparedStatement.close();
+						preparedStatement = connect.prepareStatement("insert into rubik.coin values (default, ?, ?)");
+						preparedStatement.setLong(1, key);
+						preparedStatement.setByte(2, level);
+						preparedStatement.executeUpdate();
+					}
+					resultSet.close();
+					
+					key = c.hashEdgeOne();
+					preparedStatement = connect.prepareStatement("select id, dist from rubik.areteune where hash = ? limit 1; ");
+					preparedStatement.setLong(1, key);
+					resultSet = preparedStatement.executeQuery();
+					if (resultSet.next())
+					{
+						int id = resultSet.getInt(1);
+						byte dist = resultSet.getByte(2);
+						preparedStatement.close();
+						if (dist > level)
+						{
+							preparedStatement = connect.prepareStatement("update rubik.areteune set dist = ? where id = ?");
+							preparedStatement.setByte(1, level);
+							preparedStatement.setInt(2, id);
+							preparedStatement.executeUpdate();
+						}
+					}
+					else
+					{
+						preparedStatement.close();
+						preparedStatement = connect.prepareStatement("insert into rubik.areteune values (default, ?, ?)");
+						preparedStatement.setLong(1, key);
+						preparedStatement.setByte(2, level);
+						preparedStatement.executeUpdate();
+					}
+					resultSet.close();
+					
+					key = c.hashEdgeTwo();
+					preparedStatement = connect.prepareStatement("select id, dist from rubik.aretedeux where hash = ? limit 1; ");
+					preparedStatement.setLong(1, key);
+					resultSet = preparedStatement.executeQuery();
+					if (resultSet.next())
+					{
+						int id = resultSet.getInt(1);
+						byte dist = resultSet.getByte(2);
+						preparedStatement.close();
+						if (dist > level)
+						{
+							preparedStatement = connect.prepareStatement("update rubik.aretedeux set dist = ? where id = ?");
+							preparedStatement.setByte(1, level);
+							preparedStatement.setInt(2, id);
+							preparedStatement.executeUpdate();
+						}
+					}
+					else
+					{
+						preparedStatement.close();
+						preparedStatement = connect.prepareStatement("insert into rubik.aretedeux values (default, ?, ?)");
+						preparedStatement.setLong(1, key);
+						preparedStatement.setByte(2, level);
+						preparedStatement.executeUpdate();
+					}
+					resultSet.close();
+					preparedStatement.close();
+				}
+				if (level < limite) patternSQL(c, (byte)(level + 1), limite, face, connect);
+				a.Rollback(c);  //on retourne en arrière après le parcours
+			}
+		}
+		
 	}
 	
 	/*
@@ -178,6 +339,28 @@ public class Pattern {
 				}
 				if (level < limite) patternDFS(c, (byte)(level + 1), limite, face);
 				a.Rollback(c);  //on retourne en arrière après le parcours
+			}
+		}
+	}
+	
+	public static void patternLimite(Cube c, byte level, int limite, int lastFace)
+	{
+		for (int face = 0 ; face < 6 ; face++)
+		{
+			if (lastFace == face) continue; 
+			for (int tour = 0 ; tour < 3 ; tour++)
+			{
+				Action a = new Action(face, tour);
+				a.Run(c);
+				{
+					
+					long key = c.hashCoin();
+					key = c.hashEdgeOne();
+					key = c.hashEdgeTwo();
+					
+				}
+				if (level < limite) patternLimite(c, (byte)(level + 1), limite, face);
+				a.Rollback(c);  
 			}
 		}
 	}
